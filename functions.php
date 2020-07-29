@@ -345,7 +345,7 @@ add_action('wp_print_scripts', 'html5blank_conditional_scripts'); // Add Conditi
 add_action('get_header', 'enable_threaded_comments'); // Enable Threaded Comments
 add_action('wp_enqueue_scripts', 'html5blank_styles'); // Add Theme Stylesheet
 add_action('init', 'register_html5_menu'); // Add HTML5 Blank Menu
-// add_action('init', 'create_post_type_html5'); // Add our HTML5 Blank Custom Post Type
+add_action('init', 'create_post_type_html5'); // Add our products Type
 add_action('widgets_init', 'my_remove_recent_comments_style'); // Remove inline Recent Comment Styles from wp_head()
 add_action('init', 'html5wp_pagination'); // Add our HTML5 Pagination
 
@@ -396,42 +396,40 @@ add_shortcode('html5_shortcode_demo_2', 'html5_shortcode_demo_2'); // Place [htm
 \*------------------------------------*/
 
 // // Create 1 Custom Post type for a Demo, called HTML5-Blank
-// function create_post_type_html5()
-// {
-//     register_taxonomy_for_object_type('category', 'html5-blank'); // Register Taxonomies for Category
-//     register_taxonomy_for_object_type('post_tag', 'html5-blank');
-//     register_post_type('html5-blank', // Register Custom Post Type
-//         array(
-//         'labels' => array(
-//             'name' => __('HTML5 Blank Custom Post', 'html5blank'), // Rename these to suit
-//             'singular_name' => __('HTML5 Blank Custom Post', 'html5blank'),
-//             'add_new' => __('Add New', 'html5blank'),
-//             'add_new_item' => __('Add New HTML5 Blank Custom Post', 'html5blank'),
-//             'edit' => __('Edit', 'html5blank'),
-//             'edit_item' => __('Edit HTML5 Blank Custom Post', 'html5blank'),
-//             'new_item' => __('New HTML5 Blank Custom Post', 'html5blank'),
-//             'view' => __('View HTML5 Blank Custom Post', 'html5blank'),
-//             'view_item' => __('View HTML5 Blank Custom Post', 'html5blank'),
-//             'search_items' => __('Search HTML5 Blank Custom Post', 'html5blank'),
-//             'not_found' => __('No HTML5 Blank Custom Posts found', 'html5blank'),
-//             'not_found_in_trash' => __('No HTML5 Blank Custom Posts found in Trash', 'html5blank')
-//         ),
-//         'public' => true,
-//         'hierarchical' => true, // Allows your posts to behave like Hierarchy Pages
-//         'has_archive' => true,
-//         'supports' => array(
-//             'title',
-//             'editor',
-//             'excerpt',
-//             'thumbnail'
-//         ), // Go to Dashboard Custom HTML5 Blank post for supports
-//         'can_export' => true, // Allows export in Tools > Export
-//         'taxonomies' => array(
-//             'post_tag',
-//             'category'
-//         ) // Add Category and Post Tags support
-//     ));
-// }
+function create_post_type_html5()
+{
+    register_taxonomy_for_object_type('category', 'products'); // Register Taxonomies for Category
+    register_post_type('products', // Register Custom Post Type
+        array(
+        'labels' => array(
+            'name' => __('products', 'html5blank'), // Rename these to suit
+            'singular_name' => __('products', 'html5blank'),
+            'add_new' => __('Add New', 'html5blank'),
+            'add_new_item' => __('Add New products', 'html5blank'),
+            'edit' => __('Edit', 'html5blank'),
+            'edit_item' => __('Edit products', 'html5blank'),
+            'new_item' => __('New products', 'html5blank'),
+            'view' => __('View products', 'html5blank'),
+            'view_item' => __('View products', 'html5blank'),
+            'search_items' => __('Search products', 'html5blank'),
+            'not_found' => __('No productss found', 'html5blank'),
+            'not_found_in_trash' => __('No productss found in Trash', 'html5blank')
+        ),
+        'public' => true,
+        'hierarchical' => true, // Allows your posts to behave like Hierarchy Pages
+        'has_archive' => true,
+        'supports' => array(
+            'title',
+            'editor',
+            'excerpt',
+            'thumbnail'
+        ), // Go to Dashboard Custom HTML5 Blank post for supports
+        'can_export' => true, // Allows export in Tools > Export
+        'taxonomies' => array(
+            'category'
+        ) // Add Category and Post Tags support
+    ));
+}
 
 /*------------------------------------*\
 	ShortCode Functions
@@ -449,4 +447,107 @@ function html5_shortcode_demo_2($atts, $content = null) // Demo Heading H2 short
     return '<h2>' . $content . '</h2>';
 }
 
+// Determine the top-most parent of a term
+function get_term_top_most_parent( $term, $taxonomy ) {
+    // Start from the current term
+    $parent  = get_term( $term, $taxonomy );
+    // Climb up the hierarchy until we reach a term with parent = '0'
+    while ( $parent->parent != '0' ) {
+        $term_id = $parent->parent;
+        $parent  = get_term( $term_id, $taxonomy);
+    }
+    return $parent;
+}
+
+// register forntend Ajax
+add_action('wp_ajax_products_add_front_end', 'products_add_front_end', 0);
+add_action('wp_ajax_nopriv_products_add_front_end', 'products_add_front_end');
+function products_add_front_end() {
+
+ 
+  $products_id = $_POST["post_id"];
+
+  $term_list = get_the_terms( $products_id, 'category' );
+
+
+  $taxonomy = 'category';
+
+  // get terms for current post
+  $terms = wp_get_object_terms( $products_id, $taxonomy );
+  $top_parent_terms = array();
+
+  foreach ( $terms as $term ) {
+      //get top level parent
+      $top_parent = get_term_top_most_parent( $term, $taxonomy );
+      //check if you have it in your array to only add it once
+      if ( !in_array( $top_parent, $top_parent_terms ) ) {
+          $top_parent_terms[] = $top_parent;
+      }
+  }
+
+  // build output (the HTML is up to you)
+
+  foreach ( $top_parent_terms as $term ) {
+    $output .= '<option value="'.$term->term_id.'">' . $term->name . '</option>';
+  }
+
+
+  echo $output;
+
+	die;
+}
+
+
+// register forntend Ajax
+add_action('wp_ajax_sub_add_front_end', 'sub_add_front_end', 0);
+add_action('wp_ajax_nopriv_sub_add_front_end', 'sub_add_front_end');
+function sub_add_front_end() {
+
+ 
+  $term_id = $_POST["term_id"];
+
+  $termchildren = get_term_children( $term_id, 'category' );
+
+
+  foreach ( $termchildren as $child ) {
+    $term = get_term_by( 'id', $child, 'category' );
+    $output .= '<option value="'.$term->term_id.'">' . $term->name . '</option>';
+  }
+
+
+  echo $output;
+
+	die;
+}
+
+
+
+// register forntend Ajax
+add_action('wp_ajax_financial_add_front_end', 'financial_add_front_end', 0);
+add_action('wp_ajax_nopriv_financial_add_front_end', 'financial_add_front_end');
+function financial_add_front_end() {
+
+  $products_id = $_POST["products_id"];
+  $category = $_POST["category"];
+  $subcategory = $_POST["subcategory"];
+  $price = get_field( "price", $products_id );
+  
+  $date = $_POST["date"];
+  $amount = $_POST["amount"];
+  $total = $price * $amount;
+  $title = get_the_title($products_id);
+  $term       = get_term_by( 'id', $category, 'category' );
+  $sub_term   = get_term_by( 'id', $subcategory, 'category' );
+
+    $output .= '<div class="col">';
+    $output .= '<div class="title"><span>'.$title.'</span></div>';
+    $output .= '<div class="term"><span>'.$term->name.'</span>, <span>'.$sub_term->name.'</span></div>';
+    $output .= '<div class="price">Price: '.$price.' EGP <span class="amount">'.$amount.'</span></div>';
+    $output .= '<div class="subtotal" price="'.$total.'">subtotal: '.$total.' EGP </div>';
+    $output .= '</div>';
+
+  echo $output;
+
+	die;
+}
 ?>
